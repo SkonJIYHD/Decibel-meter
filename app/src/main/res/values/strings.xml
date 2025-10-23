@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">分贝仪</string>
-    <string name="title_activity_main">分贝仪</string>
+    
+    <string-array name="ringtone_options">
+        <item>默认铃声</item>
+        <item>警报声</item>
+        <item>提示音</item>
+        <item>自定义铃声</item>
+    </string-array>
 </resources>
