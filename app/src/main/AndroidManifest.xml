@@ -9,12 +9,14 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
+        android:name=".DecibelMeterApplication"
         android:allowBackup="true"
         android:icon="@android:drawable/ic_menu_compass"
         android:label="@string/app_name"
         android:roundIcon="@android:drawable/ic_menu_compass"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:largeHeap="true">
         
         <activity
             android:name=".MainActivity"

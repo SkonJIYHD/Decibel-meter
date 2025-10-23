@@ -107,78 +107,102 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
         
-        initViews();
-        setupGestureDetector();
-        checkPermissions();
-        createNotificationChannel();
-        startDecibelMeterService();
-        loadSettings();
-        syncWithServer();
+        try {
+            setContentView(R.layout.activity_main);
+            
+            initViews();
+            setupGestureDetector();
+            checkPermissions();
+            createNotificationChannel();
+            startDecibelMeterService();
+            loadSettings();
+            syncWithServer();
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error in onCreate: " + e.getMessage(), e);
+            Toast.makeText(this, "应用初始化失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
     
     private void initViews() {
-        decibelTextView = findViewById(R.id.decibelTextView);
-        statusTextView = findViewById(R.id.statusTextView);
-        mainLayout = findViewById(R.id.mainLayout);
-        decibelGraph = findViewById(R.id.decibelGraph);
-        historyButton = findViewById(R.id.historyButton);
-        settingsButton = findViewById(R.id.settingsButton);
-        
-        // 设置点击监听
-        mainLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleClick();
+        try {
+            decibelTextView = findViewById(R.id.decibelTextView);
+            statusTextView = findViewById(R.id.statusTextView);
+            mainLayout = findViewById(R.id.mainLayout);
+            decibelGraph = findViewById(R.id.decibelGraph);
+            historyButton = findViewById(R.id.historyButton);
+            settingsButton = findViewById(R.id.settingsButton);
+            
+            if (decibelTextView == null || statusTextView == null || mainLayout == null) {
+                throw new RuntimeException("关键视图组件未找到");
             }
-        });
-        
-        // 设置长按监听
-        mainLayout.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                handleLongClick();
-                return true;
+            
+            // 设置点击监听
+            mainLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    handleClick();
+                }
+            });
+            
+            // 设置长按监听
+            mainLayout.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    handleLongClick();
+                    return true;
+                }
+            });
+            
+            // 历史记录按钮
+            if (historyButton != null) {
+                historyButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showHistoryDialog();
+                    }
+                });
             }
-        });
-        
-        // 历史记录按钮
-        historyButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showHistoryDialog();
+            
+            // 设置按钮
+            if (settingsButton != null) {
+                settingsButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showSettingsDialog();
+                    }
+                });
             }
-        });
-        
-        // 设置按钮
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showSettingsDialog();
-            }
-        });
-        
-        // 初始化图表
-        setupGraph();
+            
+            // 初始化图表
+            setupGraph();
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error in initViews: " + e.getMessage(), e);
+        }
     }
     
     private void setupGraph() {
-        series = new LineGraphSeries<>();
-        series.setColor(Color.WHITE);
-        series.setThickness(3);
-        decibelGraph.addSeries(series);
-        
-        decibelGraph.getViewport().setXAxisBoundsManual(true);
-        decibelGraph.getViewport().setMinX(0);
-        decibelGraph.getViewport().setMaxX(MAX_DATA_POINTS);
-        decibelGraph.getViewport().setYAxisBoundsManual(true);
-        decibelGraph.getViewport().setMinY(0);
-        decibelGraph.getViewport().setMaxY(120);
-        
-        decibelGraph.getGridLabelRenderer().setGridColor(Color.GRAY);
-        decibelGraph.getGridLabelRenderer().setHorizontalLabelsColor(Color.WHITE);
-        decibelGraph.getGridLabelRenderer().setVerticalLabelsColor(Color.WHITE);
+        try {
+            if (decibelGraph == null) return;
+            
+            series = new LineGraphSeries<>();
+            series.setColor(Color.WHITE);
+            series.setThickness(3);
+            decibelGraph.addSeries(series);
+            
+            decibelGraph.getViewport().setXAxisBoundsManual(true);
+            decibelGraph.getViewport().setMinX(0);
+            decibelGraph.getViewport().setMaxX(MAX_DATA_POINTS);
+            decibelGraph.getViewport().setYAxisBoundsManual(true);
+            decibelGraph.getViewport().setMinY(0);
+            decibelGraph.getViewport().setMaxY(120);
+            
+            decibelGraph.getGridLabelRenderer().setGridColor(Color.GRAY);
+            decibelGraph.getGridLabelRenderer().setHorizontalLabelsColor(Color.WHITE);
+            decibelGraph.getGridLabelRenderer().setVerticalLabelsColor(Color.WHITE);
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error in setupGraph: " + e.getMessage(), e);
+        }
     }
     
     private void setupGestureDetector() {
@@ -212,98 +236,132 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void showPasswordDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("请输入密码");
-        
-        final EditText input = new EditText(this);
-        input.setHint("密码");
-        builder.setView(input);
-        
-        builder.setPositiveButton("确定", (dialog, which) -> {
-            String password = input.getText().toString();
-            if (CORRECT_PASSWORD.equals(password)) {
-                isUnlocked = true;
-                statusTextView.setText("已解锁 - 错误模式"); // 修改这里
-                Toast.makeText(this, "解锁成功！", Toast.LENGTH_SHORT).show();
-                startScreenRecording();
-            } else {
-                Toast.makeText(this, "密码错误！", Toast.LENGTH_SHORT).show();
-            }
-        });
-        
-        builder.setNegativeButton("取消", (dialog, which) -> dialog.cancel());
-        builder.show();
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("请输入密码");
+            
+            final EditText input = new EditText(this);
+            input.setHint("密码");
+            builder.setView(input);
+            
+            builder.setPositiveButton("确定", (dialog, which) -> {
+                String password = input.getText().toString();
+                if (CORRECT_PASSWORD.equals(password)) {
+                    isUnlocked = true;
+                    statusTextView.setText("已解锁 - 错误模式"); // 修改这里
+                    Toast.makeText(this, "解锁成功！", Toast.LENGTH_SHORT).show();
+                    startScreenRecording();
+                } else {
+                    Toast.makeText(this, "密码错误！", Toast.LENGTH_SHORT).show();
+                }
+            });
+            
+            builder.setNegativeButton("取消", (dialog, which) -> dialog.cancel());
+            builder.show();
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error showing password dialog: " + e.getMessage(), e);
+        }
     }
     
     private void checkPermissions() {
-        // 检查麦克风权限
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, 
-                    new String[]{Manifest.permission.RECORD_AUDIO}, 
-                    PERMISSION_REQUEST_RECORD_AUDIO);
-        } else {
-            startRecording();
-        }
-        
-        // 检查通知权限（Android 13+）
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+        try {
+            // 检查麦克风权限
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
                     != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, 
-                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
-                        PERMISSION_REQUEST_POST_NOTIFICATIONS);
+                        new String[]{Manifest.permission.RECORD_AUDIO}, 
+                        PERMISSION_REQUEST_RECORD_AUDIO);
+            } else {
+                startRecording();
             }
+            
+            // 检查通知权限（Android 13+）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                        != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, 
+                            new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
+                            PERMISSION_REQUEST_POST_NOTIFICATIONS);
+                }
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error checking permissions: " + e.getMessage(), e);
         }
     }
     
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_RECORD_AUDIO) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startRecording();
-            } else {
-                Toast.makeText(this, "需要麦克风权限才能使用分贝仪功能", Toast.LENGTH_LONG).show();
-                statusTextView.setText("需要麦克风权限");
+        
+        try {
+            switch (requestCode) {
+                case PERMISSION_REQUEST_RECORD_AUDIO:
+                    if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        startRecording();
+                    } else {
+                        Toast.makeText(this, "需要麦克风权限才能使用分贝仪功能", Toast.LENGTH_LONG).show();
+                        statusTextView.setText("需要麦克风权限");
+                    }
+                    break;
+                    
+                case PERMISSION_REQUEST_POST_NOTIFICATIONS:
+                    if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        // 通知权限已授予，可以启动服务
+                        startDecibelMeterService();
+                    } else {
+                        // 通知权限被拒绝，但仍然可以运行应用（只是没有后台服务）
+                        Log.w("DecibelMeter", "通知权限被拒绝，后台服务可能无法正常工作");
+                    }
+                    break;
             }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error handling permission result: " + e.getMessage(), e);
         }
     }
     
     private void startRecording() {
-        int bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
-        
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        
-        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, 
-                SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize);
-        
-        if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
-            isRecording = true;
-            audioRecord.startRecording();
-            statusTextView.setText("正在监听...");
-            startDecibelMonitoring();
+        try {
+            int bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
+            
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            
+            audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, 
+                    SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize);
+            
+            if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
+                isRecording = true;
+                audioRecord.startRecording();
+                statusTextView.setText("正在监听...");
+                startDecibelMonitoring();
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error starting recording: " + e.getMessage(), e);
+            statusTextView.setText("录音启动失败");
         }
     }
     
     private void startScreenRecording() {
         if (!isUnlocked) return;
         
-        int bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
-        
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        
-        screenAudioRecord = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 
-                SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize);
-        
-        if (screenAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
-            isScreenRecording = true;
-            screenAudioRecord.startRecording();
-            startScreenAudioMonitoring();
+        try {
+            int bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
+            
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            
+            screenAudioRecord = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 
+                    SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize);
+            
+            if (screenAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
+                isScreenRecording = true;
+                screenAudioRecord.startRecording();
+                startScreenAudioMonitoring();
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error starting screen recording: " + e.getMessage(), e);
         }
     }
     
@@ -311,23 +369,27 @@ public class MainActivity extends AppCompatActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                short[] buffer = new short[1024];
-                while (isRecording) {
-                    int read = audioRecord.read(buffer, 0, buffer.length);
-                    if (read > 0) {
-                        double decibels = calculateDecibels(buffer, read);
-                        final double displayDecibels = isUnlocked ? decibels : applyDisguise(decibels);
-                        
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                updateDecibelDisplay(displayDecibels);
-                                updateGraph(displayDecibels);
-                                addToHistory(displayDecibels);
-                                checkWarning(displayDecibels);
-                            }
-                        });
+                try {
+                    short[] buffer = new short[1024];
+                    while (isRecording) {
+                        int read = audioRecord.read(buffer, 0, buffer.length);
+                        if (read > 0) {
+                            double decibels = calculateDecibels(buffer, read);
+                            final double displayDecibels = isUnlocked ? decibels : applyDisguise(decibels);
+                            
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateDecibelDisplay(displayDecibels);
+                                    updateGraph(displayDecibels);
+                                    addToHistory(displayDecibels);
+                                    checkWarning(displayDecibels);
+                                }
+                            });
+                        }
                     }
+                } catch (Exception e) {
+                    Log.e("DecibelMeter", "Error in decibel monitoring: " + e.getMessage(), e);
                 }
             }
         }).start();
@@ -337,35 +399,45 @@ public class MainActivity extends AppCompatActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                short[] buffer = new short[1024];
-                while (isScreenRecording) {
-                    int read = screenAudioRecord.read(buffer, 0, buffer.length);
-                    if (read > 0) {
-                        double decibels = calculateDecibels(buffer, read);
-                        
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                // 屏幕音频分贝显示
-                                TextView screenDecibelTextView = findViewById(R.id.screenDecibelTextView);
-                                if (screenDecibelTextView != null) {
-                                    screenDecibelTextView.setText(String.format("屏幕音频: %.1f dB", decibels));
+                try {
+                    short[] buffer = new short[1024];
+                    while (isScreenRecording) {
+                        int read = screenAudioRecord.read(buffer, 0, buffer.length);
+                        if (read > 0) {
+                            double decibels = calculateDecibels(buffer, read);
+                            
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // 屏幕音频分贝显示
+                                    TextView screenDecibelTextView = findViewById(R.id.screenDecibelTextView);
+                                    if (screenDecibelTextView != null) {
+                                        screenDecibelTextView.setText(String.format("屏幕音频: %.1f dB", decibels));
+                                        screenDecibelTextView.setVisibility(View.VISIBLE);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
+                } catch (Exception e) {
+                    Log.e("DecibelMeter", "Error in screen audio monitoring: " + e.getMessage(), e);
                 }
             }
         }).start();
     }
     
     private double calculateDecibels(short[] buffer, int length) {
-        double sum = 0;
-        for (int i = 0; i < length; i++) {
-            sum += buffer[i] * buffer[i];
+        try {
+            double sum = 0;
+            for (int i = 0; i < length; i++) {
+                sum += buffer[i] * buffer[i];
+            }
+            double rms = Math.sqrt(sum / length);
+            return 20 * Math.log10(rms / 32768.0) + 90;
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error calculating decibels: " + e.getMessage(), e);
+            return 0.0;
         }
-        double rms = Math.sqrt(sum / length);
-        return 20 * Math.log10(rms / 32768.0) + 90;
     }
     
     private double applyDisguise(double actualDecibels) {
@@ -376,29 +448,47 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void updateDecibelDisplay(double decibels) {
-        decibelTextView.setText(String.format("%.1f dB", decibels));
-        
-        int color = getColorForDecibel(decibels);
-        mainLayout.setBackgroundColor(color);
+        try {
+            decibelTextView.setText(String.format("%.1f dB", decibels));
+            
+            int color = getColorForDecibel(decibels);
+            mainLayout.setBackgroundColor(color);
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error updating display: " + e.getMessage(), e);
+        }
     }
     
     private void updateGraph(double decibels) {
-        series.appendData(new DataPoint(graphDataPointCount, decibels), true, MAX_DATA_POINTS);
-        graphDataPointCount++;
+        try {
+            if (series != null) {
+                series.appendData(new DataPoint(graphDataPointCount, decibels), true, MAX_DATA_POINTS);
+                graphDataPointCount++;
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error updating graph: " + e.getMessage(), e);
+        }
     }
     
     private void addToHistory(double decibels) {
-        decibelHistory.add(decibels);
-        if (decibelHistory.size() > MAX_HISTORY_SIZE) {
-            decibelHistory.remove(0);
+        try {
+            decibelHistory.add(decibels);
+            if (decibelHistory.size() > MAX_HISTORY_SIZE) {
+                decibelHistory.remove(0);
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error adding to history: " + e.getMessage(), e);
         }
     }
     
     private void checkWarning(double decibels) {
-        if (isWarningEnabled && decibels > warningThreshold && warningRingtone != null) {
-            if (!warningRingtone.isPlaying()) {
-                warningRingtone.play();
+        try {
+            if (isWarningEnabled && decibels > warningThreshold && warningRingtone != null) {
+                if (!warningRingtone.isPlaying()) {
+                    warningRingtone.play();
+                }
             }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error checking warning: " + e.getMessage(), e);
         }
     }
     
@@ -415,115 +505,152 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void showHistoryDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("分贝历史记录");
-        
-        StringBuilder historyText = new StringBuilder();
-        for (int i = Math.max(0, decibelHistory.size() - 50); i < decibelHistory.size(); i++) {
-            historyText.append(String.format("%d: %.1f dB\n", i + 1, decibelHistory.get(i)));
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("分贝历史记录");
+            
+            StringBuilder historyText = new StringBuilder();
+            int startIndex = Math.max(0, decibelHistory.size() - 50);
+            for (int i = startIndex; i < decibelHistory.size(); i++) {
+                historyText.append(String.format("%d: %.1f dB\n", i + 1, decibelHistory.get(i)));
+            }
+            
+            if (historyText.length() == 0) {
+                historyText.append("暂无历史记录");
+            }
+            
+            builder.setMessage(historyText.toString());
+            builder.setPositiveButton("确定", null);
+            builder.show();
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error showing history dialog: " + e.getMessage(), e);
         }
-        
-        builder.setMessage(historyText.toString());
-        builder.setPositiveButton("确定", null);
-        builder.show();
     }
     
     private void showSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("设置");
-        
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(20, 20, 20, 20);
-        
-        // 警告音设置
-        TextView warningLabel = new TextView(this);
-        warningLabel.setText("警告阈值 (dB):");
-        layout.addView(warningLabel);
-        
-        final EditText warningInput = new EditText(this);
-        warningInput.setText(String.valueOf(warningThreshold));
-        layout.addView(warningInput);
-        
-        // 警告音选择
-        TextView ringtoneLabel = new TextView(this);
-        ringtoneLabel.setText("选择警告音:");
-        layout.addView(ringtoneLabel);
-        
-        Spinner ringtoneSpinner = new Spinner(this);
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.ringtone_options, android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        ringtoneSpinner.setAdapter(adapter);
-        layout.addView(ringtoneSpinner);
-        
-        // 服务端设置
-        TextView serverLabel = new TextView(this);
-        serverLabel.setText("服务端 URL:");
-        layout.addView(serverLabel);
-        
-        final EditText serverInput = new EditText(this);
-        serverInput.setText(serverUrl);
-        layout.addView(serverInput);
-        
-        builder.setView(layout);
-        
-        builder.setPositiveButton("保存", (dialog, which) -> {
-            warningThreshold = Double.parseDouble(warningInput.getText().toString());
-            serverUrl = serverInput.getText().toString();
-            saveSettings();
-        });
-        
-        builder.setNegativeButton("取消", null);
-        builder.show();
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("设置");
+            
+            LinearLayout layout = new LinearLayout(this);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(20, 20, 20, 20);
+            
+            // 警告阈值设置
+            TextView warningLabel = new TextView(this);
+            warningLabel.setText("警告阈值 (dB):");
+            layout.addView(warningLabel);
+            
+            final EditText warningInput = new EditText(this);
+            warningInput.setText(String.valueOf(warningThreshold));
+            warningInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+            layout.addView(warningInput);
+            
+            // 警告音选择
+            TextView ringtoneLabel = new TextView(this);
+            ringtoneLabel.setText("选择警告音:");
+            layout.addView(ringtoneLabel);
+            
+            Spinner ringtoneSpinner = new Spinner(this);
+            ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                    R.array.ringtone_options, android.R.layout.simple_spinner_item);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            ringtoneSpinner.setAdapter(adapter);
+            layout.addView(ringtoneSpinner);
+            
+            // 服务端设置
+            TextView serverLabel = new TextView(this);
+            serverLabel.setText("服务端 URL:");
+            layout.addView(serverLabel);
+            
+            final EditText serverInput = new EditText(this);
+            serverInput.setText(serverUrl);
+            layout.addView(serverInput);
+            
+            builder.setView(layout);
+            
+            builder.setPositiveButton("保存", (dialog, which) -> {
+                try {
+                    warningThreshold = Double.parseDouble(warningInput.getText().toString());
+                    serverUrl = serverInput.getText().toString();
+                    saveSettings();
+                    Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
+                } catch (NumberFormatException e) {
+                    Toast.makeText(this, "请输入有效的数字", Toast.LENGTH_SHORT).show();
+                }
+            });
+            
+            builder.setNegativeButton("取消", null);
+            builder.show();
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error showing settings dialog: " + e.getMessage(), e);
+        }
     }
     
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "分贝仪服务",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription("分贝仪后台运行通知");
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(channel);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                        CHANNEL_ID,
+                        "分贝仪服务",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+                channel.setDescription("分贝仪后台运行通知");
+                NotificationManager manager = getSystemService(NotificationManager.class);
+                if (manager != null) {
+                    manager.createNotificationChannel(channel);
+                }
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error creating notification channel: " + e.getMessage(), e);
         }
     }
     
     private void startDecibelMeterService() {
-        Intent serviceIntent = new Intent(this, DecibelMeterService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
+        try {
+            Intent serviceIntent = new Intent(this, DecibelMeterService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error starting service: " + e.getMessage(), e);
+            // 如果服务启动失败，继续运行应用
         }
     }
     
     private void loadSettings() {
-        // 从SharedPreferences加载设置
-        android.content.SharedPreferences prefs = getSharedPreferences("DecibelMeterPrefs", MODE_PRIVATE);
-        warningThreshold = prefs.getFloat("warningThreshold", 80.0f);
-        isWarningEnabled = prefs.getBoolean("isWarningEnabled", true);
-        serverUrl = prefs.getString("serverUrl", "http://your-server-url.com/api");
-        
-        // 加载警告音
-        String ringtoneUri = prefs.getString("warningRingtone", null);
-        if (ringtoneUri != null) {
-            warningRingtone = RingtoneManager.getRingtone(this, Uri.parse(ringtoneUri));
+        try {
+            android.content.SharedPreferences prefs = getSharedPreferences("DecibelMeterPrefs", MODE_PRIVATE);
+            warningThreshold = prefs.getFloat("warningThreshold", 80.0f);
+            isWarningEnabled = prefs.getBoolean("isWarningEnabled", true);
+            serverUrl = prefs.getString("serverUrl", "http://your-server-url.com/api");
+            
+            // 加载警告音
+            String ringtoneUri = prefs.getString("warningRingtone", null);
+            if (ringtoneUri != null) {
+                warningRingtone = RingtoneManager.getRingtone(this, Uri.parse(ringtoneUri));
+            }
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error loading settings: " + e.getMessage(), e);
         }
     }
     
     private void saveSettings() {
-        android.content.SharedPreferences prefs = getSharedPreferences("DecibelMeterPrefs", MODE_PRIVATE);
-        android.content.SharedPreferences.Editor editor = prefs.edit();
-        editor.putFloat("warningThreshold", (float) warningThreshold);
-        editor.putBoolean("isWarningEnabled", isWarningEnabled);
-        editor.putString("serverUrl", serverUrl);
-        if (warningRingtone != null) {
-            editor.putString("warningRingtone", warningRingtone.getTitle(this));
+        try {
+            android.content.SharedPreferences prefs = getSharedPreferences("DecibelMeterPrefs", MODE_PRIVATE);
+            android.content.SharedPreferences.Editor editor = prefs.edit();
+            editor.putFloat("warningThreshold", (float) warningThreshold);
+            editor.putBoolean("isWarningEnabled", isWarningEnabled);
+            editor.putString("serverUrl", serverUrl);
+            if (warningRingtone != null) {
+                editor.putString("warningRingtone", warningRingtone.getTitle(this));
+            }
+            editor.apply();
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error saving settings: " + e.getMessage(), e);
         }
-        editor.apply();
     }
     
     private void syncWithServer() {
@@ -538,6 +665,8 @@ public class MainActivity extends AppCompatActivity {
                     conn.setRequestMethod("POST");
                     conn.setRequestProperty("Content-Type", "application/json");
                     conn.setDoOutput(true);
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(5000);
                     
                     JSONObject data = new JSONObject();
                     data.put("deviceId", Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID));
@@ -571,19 +700,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (audioRecord != null) {
-            isRecording = false;
-            audioRecord.stop();
-            audioRecord.release();
+        try {
+            if (audioRecord != null) {
+                isRecording = false;
+                audioRecord.stop();
+                audioRecord.release();
+            }
+            if (screenAudioRecord != null) {
+                isScreenRecording = false;
+                screenAudioRecord.stop();
+                screenAudioRecord.release();
+            }
+            if (warningRingtone != null && warningRingtone.isPlaying()) {
+                warningRingtone.stop();
+            }
+            executorService.shutdown();
+        } catch (Exception e) {
+            Log.e("DecibelMeter", "Error in onDestroy: " + e.getMessage(), e);
         }
-        if (screenAudioRecord != null) {
-            isScreenRecording = false;
-            screenAudioRecord.stop();
-            screenAudioRecord.release();
-        }
-        if (warningRingtone != null && warningRingtone.isPlaying()) {
-            warningRingtone.stop();
-        }
-        executorService.shutdown();
     }
 }
